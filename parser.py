@@ -1,7 +1,7 @@
 # parser.py
 import sys
 from lexer import Token
-from ast import * # Import all AST nodes
+from ast_tl import * # Import all AST nodes
 
 class ParseError(Exception):
     def __init__(self, token, message):
@@ -121,39 +121,70 @@ class Parser:
         return WhileStatement(condition, body)
 
     # Implement for loop desugaring here
+    # parser.py
+
+# parser.py
+
+# ... (其他程式碼保持不變) ...
+
+    # 處理 for 語句 (作為語法糖，解析後轉換為 while 迴圈)
     def _for_statement(self):
         self._consume("LEFT_PAREN", "Expect '(' after 'for'.")
 
         initializer = None
-        if self._match("VAR"):
-            initializer = self._var_declaration()
-        elif not self._check("SEMICOLON"):
-            initializer = self._expression_statement()
-        self._consume("SEMICOLON", "Expect ';' after loop initializer.")
+        # 處理初始化部分 (Initializer)
+        if self._match("VAR"): # 例如： for (let i = 0; ...)
+            # 這裡只解析變數宣告的名稱和初始值，不消耗分號
+            name_token = self._consume("IDENTIFIER", "Expect variable name after 'let'.")
+            init_expr = None
+            if self._match("EQUAL"):
+                init_expr = self._expression()
+            initializer = VarDeclaration(name_token, init_expr)
+        elif not self._check("SEMICOLON"): # 例如： for (i = 0; ...) 或 for (true; ...)
+            # 如果不是 'let' 開頭，且也不是直接的分號 (表示空的初始化)，則解析為表達式
+            initializer = self._expression()
+        # 如果是直接遇到分號 (例如： for (; ...)，則 initializer 保持 None
+
+        # 消耗第一個分號，表示初始化部分結束
+        self._consume("SEMICOLON", "Expect ';' after for loop initializer.")
 
         condition = None
-        if not self._check("SEMICOLON"):
+        # 處理條件部分 (Condition)
+        if not self._check("SEMICOLON"): # 如果不是直接的分號 (表示空的條件)
             condition = self._expression()
-        self._consume("SEMICOLON", "Expect ';' after loop condition.")
+
+        # 消耗第二個分號，表示條件部分結束
+        self._consume("SEMICOLON", "Expect ';' after for loop condition.")
 
         increment = None
-        if not self._check("RIGHT_PAREN"):
+        # 處理增量部分 (Increment)
+        if not self._check("RIGHT_PAREN"): # 如果不是直接的右括號 (表示空的增量)
             increment = self._expression()
-        self._consume("RIGHT_PAREN", "Expect ')' after for clauses.")
 
-        body = self._statement()
+        # 消耗右括號，表示 for 迴圈的圓括號部分結束
+        self._consume("RIGHT_PAREN", "Expect ')' after for loop clauses.")
 
-        # Desugar for loop into a while loop
+        body = self._statement() # 解析 for 迴圈體 (可以是單個語句或區塊)
+
+        # --- 將 for 迴圈解糖 (Desugar) 為 while 迴圈 ---
+        # 1. 將增量語句加入到迴圈體的末尾
         if increment:
-            # Wrap body and increment in a block
             body = Block([body, ExpressionStatement(increment)])
-        if not condition:
-            condition = BooleanLiteral(True) # Infinite loop if no condition
+
+        # 2. 如果沒有條件，預設為 true (無限迴圈)
+        if condition is None:
+            condition = BooleanLiteral(True)
+
+        # 3. 將整個迴圈體和條件包裝成一個 WhileStatement
         body = WhileStatement(condition, body)
+
+        # 4. 如果有初始化部分，將整個 while 迴圈包裝在一個區塊中
         if initializer:
-            # Wrap initializer and while loop in a block
             body = Block([initializer, body])
+
         return body
+
+# ... (其他程式碼保持不變) ...
 
 
     def _block(self):

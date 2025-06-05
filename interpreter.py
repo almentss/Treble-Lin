@@ -1,6 +1,6 @@
 # interpreter.py
 import sys
-from ast import *
+from ast_tl import *
 from lexer import Token # For error reporting
 from environment import Environment
 from resolver import Resolver # Import Resolver
@@ -254,6 +254,10 @@ class Interpreter:
                 return left + right
             elif isinstance(left, str) and isinstance(right, str):
                 return left + right
+            elif isinstance(left, str) and isinstance(right, (int, float)):
+                return left + str(right) # 將數字轉換為字符串
+            elif isinstance(left, (int, float)) and isinstance(right, str):
+                return str(left) + right # 將數字轉換為字符串
             raise RuntimeError("Operands must be two numbers or two strings for '+'.", expr.operator_token)
         elif operator_type == "GREATER":
             self._check_number_operands(expr.operator_token, left, right)
