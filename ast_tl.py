@@ -133,11 +133,12 @@ class ContinueStatement(Statement):
     def __repr__(self):
         return "Continue()"
 
-class PrintStatement(Statement):
-    def __init__(self, expression):
-        self.expression = expression
-    def __repr__(self):
-        return f"Print({self.expression})"
+# PrintStatement is no longer needed as `print` is now a standard callable.
+# class PrintStatement(Statement):
+#     def __init__(self, expression):
+#         self.expression = expression
+#     def __repr__(self):
+#         return f"Print({self.expression})"
 
 class TryCatchStatement(Statement):
     def __init__(self, try_block, error_name_token, catch_block):

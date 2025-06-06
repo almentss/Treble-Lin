@@ -56,7 +56,6 @@ class Parser:
         return VarDeclaration(name, initializer)
 
     def _statement(self):
-        if self._match("PRINT"): return self._print_statement()
         if self._match("IF"): return self._if_statement()
         if self._match("WHILE"): return self._while_statement()
         if self._match("FOR"): return self._for_statement()
@@ -65,13 +64,8 @@ class Parser:
         if self._match("CONTINUE"): return self._continue_statement()
         if self._match("TRY"): return self._try_catch_statement()
         if self._match("LEFT_BRACE"): return Block(self._block())
+        # The dedicated PrintStatement is removed. `print(...)` is now parsed as an ExpressionStatement(CallExpression).
         return self._expression_statement()
-
-    def _print_statement(self):
-        # Now print takes a single expression, but interpreter will handle multiple for flexibility
-        expr = self._expression()
-        self._consume("SEMICOLON", "Expect ';' after value.")
-        return PrintStatement(expr)
 
     def _return_statement(self):
         keyword = self._previous()
@@ -120,12 +114,6 @@ class Parser:
         body = self._statement()
         return WhileStatement(condition, body)
 
-    # Implement for loop desugaring here
-    # parser.py
-
-# parser.py
-
-# ... (其他程式碼保持不變) ...
 
     # 處理 for 語句 (作為語法糖，解析後轉換為 while 迴圈)
     def _for_statement(self):
@@ -183,8 +171,6 @@ class Parser:
             body = Block([initializer, body])
 
         return body
-
-# ... (其他程式碼保持不變) ...
 
 
     def _block(self):

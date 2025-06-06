@@ -41,8 +41,6 @@ class Resolver:
             self._resolve_statement(stmt.then_branch)
             if stmt.else_branch:
                 self._resolve_statement(stmt.else_branch)
-        elif isinstance(stmt, PrintStatement):
-            self._resolve_expression(stmt.expression)
         elif isinstance(stmt, ReturnStatement):
             if stmt.value:
                 self._resolve_expression(stmt.value)

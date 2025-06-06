@@ -45,7 +45,6 @@ class Lexer:
             "if": "IF",
             "nil": "NIL",
             "or": "LOGICAL_OR",
-            "print": "PRINT", # Changed to PRINT to distinguish from generic KEYWORD
             "return": "RETURN",
             "super": "SUPER", # Not implemented yet
             "this": "THIS",   # Not implemented yet
