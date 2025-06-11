@@ -1,7 +1,7 @@
 # parser.py
 import sys
 from lexer import Token
-from ast_tl import * # Import all AST nodes
+from ast_tl import * 
 
 class ParseError(Exception):
     def __init__(self, token, message):
@@ -23,7 +23,7 @@ class Parser:
             except ParseError as e:
                 print(e, file=sys.stderr)
                 self.had_error = True
-                self._synchronize() # Error recovery
+                self._synchronize() 
         return statements
 
     def _declaration(self):
@@ -37,7 +37,7 @@ class Parser:
         parameters = []
         if not self._check("RIGHT_PAREN"):
             while True:
-                if len(parameters) >= 255: # Arbitrary limit
+                if len(parameters) >= 255: 
                     self._error(self._peek(), "Cannot have more than 255 parameters.")
                 parameters.append(self._consume("IDENTIFIER", "Expect parameter name."))
                 if not self._match("COMMA"):
@@ -45,7 +45,7 @@ class Parser:
         self._consume("RIGHT_PAREN", "Expect ')' after parameters.")
         self._consume("LEFT_BRACE", f"Expect '{{' before {kind} body.")
         body = self._block()
-        return FunctionDeclaration(name, parameters, Block(body)) # Body is a Block node
+        return FunctionDeclaration(name, parameters, Block(body)) 
 
     def _var_declaration(self):
         name = self._consume("IDENTIFIER", "Expect variable name.")
@@ -64,7 +64,6 @@ class Parser:
         if self._match("CONTINUE"): return self._continue_statement()
         if self._match("TRY"): return self._try_catch_statement()
         if self._match("LEFT_BRACE"): return Block(self._block())
-        # The dedicated PrintStatement is removed. `print(...)` is now parsed as an ExpressionStatement(CallExpression).
         return self._expression_statement()
 
     def _return_statement(self):
@@ -87,13 +86,13 @@ class Parser:
 
     def _try_catch_statement(self):
         self._consume("LEFT_BRACE", "Expect '{' after 'try'.")
-        try_block_statements = self._block() # This returns a list of statements
+        try_block_statements = self._block() 
         self._consume("CATCH", "Expect 'catch' after try block.")
         self._consume("LEFT_PAREN", "Expect '(' after 'catch'.")
         error_name_token = self._consume("IDENTIFIER", "Expect error variable name in catch block.")
         self._consume("RIGHT_PAREN", "Expect ')' after error variable name.")
         self._consume("LEFT_BRACE", "Expect '{' before catch block body.")
-        catch_block_statements = self._block() # This returns a list of statements
+        catch_block_statements = self._block() 
         return TryCatchStatement(Block(try_block_statements), error_name_token, Block(catch_block_statements))
 
 
@@ -115,58 +114,41 @@ class Parser:
         return WhileStatement(condition, body)
 
 
-    # 處理 for 語句 (作為語法糖，解析後轉換為 while 迴圈)
     def _for_statement(self):
         self._consume("LEFT_PAREN", "Expect '(' after 'for'.")
 
         initializer = None
-        # 處理初始化部分 (Initializer)
-        if self._match("VAR"): # 例如： for (let i = 0; ...)
-            # 這裡只解析變數宣告的名稱和初始值，不消耗分號
+        if self._match("VAR"): 
             name_token = self._consume("IDENTIFIER", "Expect variable name after 'let'.")
             init_expr = None
             if self._match("EQUAL"):
                 init_expr = self._expression()
             initializer = VarDeclaration(name_token, init_expr)
-        elif not self._check("SEMICOLON"): # 例如： for (i = 0; ...) 或 for (true; ...)
-            # 如果不是 'let' 開頭，且也不是直接的分號 (表示空的初始化)，則解析為表達式
+        elif not self._check("SEMICOLON"): 
             initializer = self._expression()
-        # 如果是直接遇到分號 (例如： for (; ...)，則 initializer 保持 None
-
-        # 消耗第一個分號，表示初始化部分結束
         self._consume("SEMICOLON", "Expect ';' after for loop initializer.")
 
         condition = None
-        # 處理條件部分 (Condition)
-        if not self._check("SEMICOLON"): # 如果不是直接的分號 (表示空的條件)
+        if not self._check("SEMICOLON"): 
             condition = self._expression()
 
-        # 消耗第二個分號，表示條件部分結束
         self._consume("SEMICOLON", "Expect ';' after for loop condition.")
 
         increment = None
-        # 處理增量部分 (Increment)
-        if not self._check("RIGHT_PAREN"): # 如果不是直接的右括號 (表示空的增量)
+        if not self._check("RIGHT_PAREN"):
             increment = self._expression()
 
-        # 消耗右括號，表示 for 迴圈的圓括號部分結束
         self._consume("RIGHT_PAREN", "Expect ')' after for loop clauses.")
 
-        body = self._statement() # 解析 for 迴圈體 (可以是單個語句或區塊)
-
-        # --- 將 for 迴圈解糖 (Desugar) 為 while 迴圈 ---
-        # 1. 將增量語句加入到迴圈體的末尾
+        body = self._statement() 
         if increment:
             body = Block([body, ExpressionStatement(increment)])
 
-        # 2. 如果沒有條件，預設為 true (無限迴圈)
         if condition is None:
             condition = BooleanLiteral(True)
 
-        # 3. 將整個迴圈體和條件包裝成一個 WhileStatement
         body = WhileStatement(condition, body)
 
-        # 4. 如果有初始化部分，將整個 while 迴圈包裝在一個區塊中
         if initializer:
             body = Block([initializer, body])
 
@@ -189,20 +171,19 @@ class Parser:
         return self._assignment()
 
     def _assignment(self):
-        expr = self._or() # Changed to _or for logical operator hierarchy
+        expr = self._or() 
 
         if self._match("EQUAL"):
             equals = self._previous()
-            value = self._assignment() # Right-associativity for assignment
+            value = self._assignment() 
 
             if isinstance(expr, Variable):
                 name = expr.name_token
                 return Assignment(name, value)
-            # Add other assignable targets here if needed (e.g., properties)
             self._error(equals, "Invalid assignment target.")
         return expr
 
-    def _or(self): # New method for logical OR
+    def _or(self): 
         expr = self._and()
         while self._match("LOGICAL_OR"):
             operator = self._previous()
@@ -210,7 +191,7 @@ class Parser:
             expr = BinaryExpression(expr, operator, right)
         return expr
 
-    def _and(self): # New method for logical AND
+    def _and(self): 
         expr = self._equality()
         while self._match("LOGICAL_AND"):
             operator = self._previous()
@@ -292,7 +273,6 @@ class Parser:
 
         raise self._error(self._peek(), "Expect expression.")
 
-    # Helper methods for parser
     def _match(self, *types):
         for type in types:
             if self._check(type):
