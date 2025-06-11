@@ -1,6 +1,7 @@
 # interpreter.py
 import sys
-from ast import *
+import math
+from ast_tl import *
 from lexer import Token # For error reporting
 from environment import Environment
 from resolver import Resolver # Import Resolver
@@ -68,6 +69,7 @@ class TrebleLinFunction(TrebleLinCallable):
     def __repr__(self):
         return f"<fun {self.declaration.name_token.lexeme}>"
 
+
 class Interpreter:
     def __init__(self):
         self.globals = Environment()
@@ -79,11 +81,40 @@ class Interpreter:
 
     def _print_builtin(self):
         class PrintBuiltin(TrebleLinCallable):
-            def arity(self): return -1 # -1 means variable arity for simplicity (can take any number of args)
+            def arity(self): 
+                # Allow any number of arguments
+                return -1 
+            
             def call(self, interpreter, arguments):
-                output = " ".join([interpreter._stringify(arg) for arg in arguments])
-                print(output)
+                # Handle print() with no arguments -> prints a newline
+                if not arguments:
+                    print()
+                    return None
+
+                first_arg = arguments[0]
+                
+                # --- C-style format printing ---
+                # Check if the first argument is a string and looks like a format string
+                if isinstance(first_arg, str) and '%' in first_arg and len(arguments) > 1:
+                    try:
+                        # Use Python's built-in C-style string formatting
+                        # We only pass the arguments needed for formatting
+                        format_args = tuple(arguments[1:])
+                        output = first_arg % format_args
+                        print(output, end='') # Use print to handle output, but end='' to avoid extra newline if format string has \n
+                        sys.stdout.flush()
+                    except (TypeError, ValueError) as e:
+                        # Catch formatting errors (e.g., wrong type, not enough args)
+                        raise RuntimeError(f"Invalid arguments for format string '{first_arg}'. Details: {e}")
+                
+                # --- Python-style printing ---
+                else:
+                    # Default behavior: join all arguments with a space
+                    output = " ".join([interpreter._stringify(arg) for arg in arguments])
+                    print(output)
+                
                 return None
+
             def __repr__(self): return "<native fun print>"
         return PrintBuiltin()
 
@@ -159,21 +190,9 @@ class Interpreter:
     def _execute_ContinueStatement(self, stmt):
         raise ContinueLoop()
 
-    def _execute_PrintStatement(self, stmt):
-        # For simplicity, print is now a built-in function that gets evaluated
-        # This assumes _print_builtin can handle what's passed to it.
-        # If print was just a keyword, we would directly print self._stringify(self._evaluate(stmt.expression))
-        # But given the design, treating 'print' as a call to a built-in is more flexible.
-        # For now, it simply evaluates the expression and prints it.
-        # If we wanted to allow print(a, b, c), the parser would need to treat 'print' as a call and
-        # _print_builtin would handle multiple arguments.
-        # The current parser treats 'print' as a statement followed by a single expression.
-        # Let's adjust it to take multiple args in the _print_builtin call.
-        # If the parser allows `print(expr1, expr2, ...);`, then the PrintStatement AST node
-        # would need to hold a list of expressions. For now, it holds one.
-        # A simple compromise: `print` keyword takes one expression, but the built-in can take multiple.
-        # For the provided AST `PrintStatement(expression)`, we'll just print that one.
-        print(self._stringify(self._evaluate(stmt.expression)))
+    # _execute_PrintStatement is no longer needed.
+    # def _execute_PrintStatement(self, stmt):
+    #     sys.stdout.write(str(self._stringify(self._evaluate(stmt.expression))))
 
 
     def _execute_TryCatchStatement(self, stmt):
@@ -249,11 +268,22 @@ class Interpreter:
         elif operator_type == "STAR":
             self._check_number_operands(expr.operator_token, left, right)
             return left * right
+        elif operator_type == "MODULO": 
+            self._check_number_operands(expr.operator_token, left, right)
+            if right == 0:
+                raise RuntimeError("Modulo by zero.", expr.operator_token)
+            if isinstance(left, int) and isinstance(right, int):
+                return left % right
+            return left % right 
         elif operator_type == "PLUS":
             if isinstance(left, (int, float)) and isinstance(right, (int, float)):
                 return left + right
             elif isinstance(left, str) and isinstance(right, str):
                 return left + right
+            elif isinstance(left, str) and isinstance(right, (int, float)):
+                return left + str(right) # 將數字轉換為字符串
+            elif isinstance(left, (int, float)) and isinstance(right, str):
+                return str(left) + right # 將數字轉換為字符串
             raise RuntimeError("Operands must be two numbers or two strings for '+'.", expr.operator_token)
         elif operator_type == "GREATER":
             self._check_number_operands(expr.operator_token, left, right)
