@@ -2,11 +2,10 @@
 import sys
 import math
 from ast_tl import *
-from lexer import Token # For error reporting
+from lexer import Token 
 from environment import Environment
-from resolver import Resolver # Import Resolver
+from resolver import Resolver 
 
-# Custom exceptions for control flow and runtime errors
 class ReturnException(Exception):
     def __init__(self, value):
         self.value = value
@@ -33,34 +32,30 @@ class TrebleLinCallable:
 class TrebleLinFunction(TrebleLinCallable):
     def __init__(self, declaration, closure, is_initializer=False):
         self.declaration = declaration
-        self.closure = closure # Environment where function was declared
+        self.closure = closure 
         self.is_initializer = is_initializer
 
     def call(self, interpreter, arguments):
-        # Create a new environment for the function's execution, parented by the closure
         environment = Environment(self.closure)
 
-        # Bind parameters to arguments
         for i, param_token in enumerate(self.declaration.parameters):
             environment.define(param_token.lexeme, arguments[i])
 
         try:
             interpreter.execute_block(self.declaration.body.statements, environment)
         except ReturnException as e:
-            if self.is_initializer: # Initializers implicitly return 'this'
+            if self.is_initializer:
                 return self.closure.get_at(0, Token("this", "this", None, -1))
             return e.value
 
-        if self.is_initializer: # Initializers implicitly return 'this' even without explicit return
+        if self.is_initializer:
             return self.closure.get_at(0, Token("this", "this", None, -1))
-        return None # Implicit nil return if no return statement
+        return None 
 
     def arity(self):
         return len(self.declaration.parameters)
 
     def bind(self, instance):
-        # Used for methods (not implemented in this basic example, but good to keep in mind)
-        # This creates a new environment for the method call, binding 'this'
         environment = Environment(self.closure)
         environment.define("this", instance)
         return TrebleLinFunction(self.declaration, environment, self.is_initializer)
@@ -74,42 +69,33 @@ class Interpreter:
     def __init__(self):
         self.globals = Environment()
         self.environment = self.globals
-        self.locals = {} # Stores distances (Expression AST node -> int distance)
+        self.locals = {} 
 
-        # Define built-in print function
         self.globals.define("print", self._print_builtin())
 
     def _print_builtin(self):
         class PrintBuiltin(TrebleLinCallable):
             def arity(self): 
-                # Allow any number of arguments
+
                 return -1 
             
             def call(self, interpreter, arguments):
-                # Handle print() with no arguments -> prints a newline
                 if not arguments:
                     print()
                     return None
 
                 first_arg = arguments[0]
-                
-                # --- C-style format printing ---
-                # Check if the first argument is a string and looks like a format string
+            
                 if isinstance(first_arg, str) and '%' in first_arg and len(arguments) > 1:
                     try:
-                        # Use Python's built-in C-style string formatting
-                        # We only pass the arguments needed for formatting
                         format_args = tuple(arguments[1:])
                         output = first_arg % format_args
-                        print(output, end='') # Use print to handle output, but end='' to avoid extra newline if format string has \n
+                        print(output, end='') 
                         sys.stdout.flush()
                     except (TypeError, ValueError) as e:
-                        # Catch formatting errors (e.g., wrong type, not enough args)
                         raise RuntimeError(f"Invalid arguments for format string '{first_arg}'. Details: {e}")
                 
-                # --- Python-style printing ---
                 else:
-                    # Default behavior: join all arguments with a space
                     output = " ".join([interpreter._stringify(arg) for arg in arguments])
                     print(output)
                 
@@ -120,26 +106,22 @@ class Interpreter:
 
 
     def interpret(self, statements):
-        # First, resolve variables
         resolver = Resolver(self)
         resolver.resolve(statements)
         if resolver.had_error:
-            # If resolution failed, stop interpretation.
-            sys.exit(65) # Exit code for data format error
+            sys.exit(65)
 
         try:
             for statement in statements:
                 self._execute(statement)
         except RuntimeError as e:
-            # Report the runtime error
             if e.token:
                 print(f"Runtime Error at line {e.token.line}: {e.message}", file=sys.stderr)
             else:
                 print(f"Runtime Error: {e.message}", file=sys.stderr)
-            sys.exit(70) # Exit code for runtime error
+            sys.exit(70) 
 
     def _execute(self, stmt):
-        # Using ASDL like dispatch (similar to how visitors work)
         method_name = f'_execute_{type(stmt).__name__}'
         if hasattr(self, method_name):
             getattr(self, method_name)(stmt)
@@ -190,26 +172,18 @@ class Interpreter:
     def _execute_ContinueStatement(self, stmt):
         raise ContinueLoop()
 
-    # _execute_PrintStatement is no longer needed.
-    # def _execute_PrintStatement(self, stmt):
-    #     sys.stdout.write(str(self._stringify(self._evaluate(stmt.expression))))
-
-
     def _execute_TryCatchStatement(self, stmt):
         previous_environment = self.environment
         try:
-            self.environment = Environment(self.environment) # Enter a new scope for the try block
+            self.environment = Environment(self.environment)
             self.execute_block(stmt.try_block.statements, self.environment)
         except RuntimeError as err:
-            # Catch the runtime error and execute the catch block
-            # The catch block's environment is parented by the environment *before* the try block,
-            # so variables declared outside try are accessible.
             catch_env = Environment(previous_environment)
-            catch_env.define(stmt.error_name_token.lexeme, str(err.message)) # Store error message
+            catch_env.define(stmt.error_name_token.lexeme, str(err.message)) 
             self.environment = catch_env
             self.execute_block(stmt.catch_block.statements, self.environment)
         finally:
-            self.environment = previous_environment # Restore environment
+            self.environment = previous_environment 
 
     def execute_block(self, statements, environment):
         previous_environment = self.environment
@@ -218,7 +192,7 @@ class Interpreter:
             for statement in statements:
                 self._execute(statement)
         finally:
-            self.environment = previous_environment # Restore environment
+            self.environment = previous_environment 
 
     def _evaluate(self, expr):
         method_name = f'_evaluate_{type(expr).__name__}'
@@ -245,7 +219,6 @@ class Interpreter:
         left = self._evaluate(expr.left)
         operator_type = expr.operator_token.type
 
-        # Short-circuiting for logical AND/OR
         if operator_type == "LOGICAL_OR":
             if self._is_truthy(left): return left
             right = self._evaluate(expr.right)
@@ -281,9 +254,9 @@ class Interpreter:
             elif isinstance(left, str) and isinstance(right, str):
                 return left + right
             elif isinstance(left, str) and isinstance(right, (int, float)):
-                return left + str(right) # 將數字轉換為字符串
+                return left + str(right) 
             elif isinstance(left, (int, float)) and isinstance(right, str):
-                return str(left) + right # 將數字轉換為字符串
+                return str(left) + right 
             raise RuntimeError("Operands must be two numbers or two strings for '+'.", expr.operator_token)
         elif operator_type == "GREATER":
             self._check_number_operands(expr.operator_token, left, right)
@@ -309,10 +282,10 @@ class Interpreter:
 
     def _evaluate_Assignment(self, expr):
         value = self._evaluate(expr.value)
-        if expr in self.locals: # Check if resolved
+        if expr in self.locals: 
             distance = self.locals[expr]
             self.environment.assign_at(distance, expr.name_token, value)
-        else: # Global variable assignment
+        else: 
             self.globals.assign(expr.name_token, value)
         return value
 
@@ -323,13 +296,11 @@ class Interpreter:
         if not isinstance(callee, TrebleLinCallable):
             raise RuntimeError("Can only call functions and classes.", expr.paren_token)
 
-        # Allow variable arity for built-ins, but enforce for user functions
         if callee.arity() != -1 and len(arguments) != callee.arity():
             raise RuntimeError(f"Expected {callee.arity()} arguments but got {len(arguments)}.", expr.paren_token)
 
         return callee.call(self, arguments)
 
-    # Helper for looking up variables, using resolution results if available
     def _lookup_variable(self, name_token, expr):
         if expr in self.locals:
             distance = self.locals[expr]
@@ -340,9 +311,6 @@ class Interpreter:
     def _is_truthy(self, value):
         if value is None: return False
         if isinstance(value, bool): return value
-        # Numbers, strings, etc. are truthy by default (as per sheet)
-        # For numbers, 0 could be considered falsy in some languages, but here all numbers are truthy.
-        # This is a design choice.
         return True
 
     def _is_equal(self, a, b):
