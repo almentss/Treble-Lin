@@ -97,7 +97,7 @@ class Interpreter:
                 
                 else:
                     output = " ".join([interpreter._stringify(arg) for arg in arguments])
-                    print(output)
+                    print(output,end="")
                 
                 return None
 
