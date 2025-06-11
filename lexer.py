@@ -18,17 +18,15 @@ class Lexer:
         self.start = 0
         self.current = 0
         self.line = 1
-        self.had_error = False # Flag for error reporting
+        self.had_error = False 
 
-        # Define all token types
         self.token_types = {
-            # Single-character tokens.
             '(': "LEFT_PAREN", ')': "RIGHT_PAREN",
             '{': "LEFT_BRACE", '}': "RIGHT_BRACE",
+            '[': "LEFT_BRACKET", ']': "RIGHT_BRACKET",
             ',': "COMMA", '.': "DOT", '-': "MINUS", '+': "PLUS",
-            ';': "SEMICOLON", '*': "STAR", '/': "SLASH",
+            ';': "SEMICOLON", '*': "STAR", '/': "SLASH",'%': "MODULO",
 
-            # One or two character tokens.
             '!': "BANG", '!=': "BANG_EQUAL",
             '=': "EQUAL", '==': "EQUAL_EQUAL",
             '<': "LESS", '<=': "LESS_EQUAL",
@@ -45,12 +43,11 @@ class Lexer:
             "if": "IF",
             "nil": "NIL",
             "or": "LOGICAL_OR",
-            "print": "PRINT", # Changed to PRINT to distinguish from generic KEYWORD
             "return": "RETURN",
             "super": "SUPER", # Not implemented yet
             "this": "THIS",   # Not implemented yet
             "true": "TRUE",
-            "let": "VAR", # Changed to VAR for variable declaration
+            "let": "VAR", 
             "while": "WHILE",
             "break": "BREAK",
             "continue": "CONTINUE",
@@ -104,17 +101,19 @@ class Lexer:
         elif char == ')': self._add_token("RIGHT_PAREN")
         elif char == '{': self._add_token("LEFT_BRACE")
         elif char == '}': self._add_token("RIGHT_BRACE")
+        elif char == '[': self._add_token("LEFT_BRACKET")
+        elif char == ']': self._add_token("RIGHT_BRACKET")
         elif char == ',': self._add_token("COMMA")
         elif char == ';': self._add_token("SEMICOLON")
         elif char == '+': self._add_token("PLUS")
         elif char == '-': self._add_token("MINUS")
         elif char == '*': self._add_token("STAR")
+        elif char == '%': self._add_token("MODULO")
         elif char == '.': self._add_token("DOT")
         elif char == '/':
-            if self._match('/'): # Single-line comment
+            if self._match('/'): 
                 while self._peek() != '\n' and not self._is_at_end():
                     self._advance()
-            # For multi-line comments (/* ... */)
             elif self._match('*'):
                 self._multi_line_comment()
             else:
@@ -134,23 +133,48 @@ class Lexer:
         elif char.isalpha() or char == '_':
             self._identifier()
         elif char in [' ', '\r', '\t']:
-            pass # Ignore whitespace
+            pass 
         elif char == '\n':
             self.line += 1
         else:
             self._error(self.line, f"Unexpected character '{char}'.")
 
     def _string(self):
+        is_escaping = False
+        parsed_value = []
+
         while self._peek() != '"' and not self._is_at_end():
-            if self._peek() == '\n': self.line += 1
-            self._advance()
+            char = self._advance()
+
+            if is_escaping:
+                if char == 'n':
+                    parsed_value.append('\n')
+                elif char == 't':
+                    parsed_value.append('\t')
+                elif char == '\\':
+                    parsed_value.append('\\')
+                elif char == '"': 
+                    parsed_value.append('"')
+                else:
+                    parsed_value.append('\\')
+                    parsed_value.append(char)
+                is_escaping = False
+            elif char == '\\':
+                is_escaping = True
+            else:
+                parsed_value.append(char)
+
+            if self._peek() == '\n': 
+                self.line += 1
 
         if self._is_at_end():
-            self._error(self.line, "Unterminated string.")
+            print(f"Error at line {self.line}: Unterminated string.", file=sys.stderr)
+            self.had_error = True
             return
 
-        self._advance() # The closing "
-        value = self.source[self.start + 1:self.current - 1]
+        self._advance() 
+
+        value = "".join(parsed_value)
         self._add_token("STRING", value)
 
     def _number(self):
@@ -158,7 +182,7 @@ class Lexer:
             self._advance()
 
         if self._peek() == '.' and self._peek_next().isdigit():
-            self._advance() # Consume the '.'
+            self._advance() 
             while self._peek().isdigit():
                 self._advance()
 
@@ -178,7 +202,6 @@ class Lexer:
         self._add_token(token_type, literal)
 
     def _multi_line_comment(self):
-        # Consume characters until '*/' is found
         while not (self._peek() == '*' and self._peek_next() == '/') and not self._is_at_end():
             if self._peek() == '\n':
                 self.line += 1
@@ -188,5 +211,5 @@ class Lexer:
             self._error(self.line, "Unterminated multi-line comment.")
             return
 
-        self._advance() # Consume '*'
-        self._advance() # Consume '/'
+        self._advance() 
+        self._advance()

@@ -353,13 +353,13 @@ class Interpreter:
             return "[" + ", ".join(items) + "]"
         return str(value)
     
-    def _evaluate_ArrayLiteral(self, expr):
+    def visit_ArrayLiteral(self, expr):
         elements = []
         for element_expr in expr.elements:
             elements.append(self._evaluate(element_expr))
         return elements
 
-    def _evaluate_Subscript(self, expr):
+    def visit_Subscript(self, expr):
         callee = self._evaluate(expr.callee)
         if not isinstance(callee, list):
             raise RuntimeError("Can only subscript on arrays.", expr.bracket_token)
@@ -373,7 +373,7 @@ class Interpreter:
         except IndexError:
             raise RuntimeError("Array index out of bounds.", expr.bracket_token)
 
-    def _evaluate_Set(self, expr):
+    def visit_Set(self, expr):
         callee_obj = self._evaluate(expr.callee)
         if not isinstance(callee_obj, list):
             raise RuntimeError("Can only assign to elements of arrays.", expr.bracket_token)

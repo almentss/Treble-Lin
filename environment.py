@@ -14,9 +14,6 @@ class Environment:
         if self.parent:
             self.parent.assign(name_token, value)
             return
-        # This error is now caught by the Resolver if resolution fails
-        # raise RuntimeError(f"Undefined variable '{name_token.lexeme}'.", name_token)
-        # For dynamic assignment not covered by resolver, it might still occur
         raise RuntimeError(f"Undefined variable '{name_token.lexeme}'.", name_token)
 
 
@@ -25,9 +22,6 @@ class Environment:
             return self.values[name_token.lexeme]
         if self.parent:
             return self.parent.get(name_token)
-        # This error is now caught by the Resolver if resolution fails
-        # raise RuntimeError(f"Undefined variable '{name_token.lexeme}'.", name_token)
-        # For dynamic access not covered by resolver, it might still occur
         raise RuntimeError(f"Undefined variable '{name_token.lexeme}'.", name_token)
 
 
