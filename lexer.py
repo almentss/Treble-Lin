@@ -18,17 +18,14 @@ class Lexer:
         self.start = 0
         self.current = 0
         self.line = 1
-        self.had_error = False # Flag for error reporting
+        self.had_error = False 
 
-        # Define all token types
         self.token_types = {
-            # Single-character tokens.
             '(': "LEFT_PAREN", ')': "RIGHT_PAREN",
             '{': "LEFT_BRACE", '}': "RIGHT_BRACE",
             ',': "COMMA", '.': "DOT", '-': "MINUS", '+': "PLUS",
             ';': "SEMICOLON", '*': "STAR", '/': "SLASH",'%': "MODULO",
 
-            # One or two character tokens.
             '!': "BANG", '!=': "BANG_EQUAL",
             '=': "EQUAL", '==': "EQUAL_EQUAL",
             '<': "LESS", '<=': "LESS_EQUAL",
@@ -49,7 +46,7 @@ class Lexer:
             "super": "SUPER", # Not implemented yet
             "this": "THIS",   # Not implemented yet
             "true": "TRUE",
-            "let": "VAR", # Changed to VAR for variable declaration
+            "let": "VAR", 
             "while": "WHILE",
             "break": "BREAK",
             "continue": "CONTINUE",
@@ -111,10 +108,9 @@ class Lexer:
         elif char == '%': self._add_token("MODULO")
         elif char == '.': self._add_token("DOT")
         elif char == '/':
-            if self._match('/'): # Single-line comment
+            if self._match('/'): 
                 while self._peek() != '\n' and not self._is_at_end():
                     self._advance()
-            # For multi-line comments (/* ... */)
             elif self._match('*'):
                 self._multi_line_comment()
             else:
@@ -134,17 +130,15 @@ class Lexer:
         elif char.isalpha() or char == '_':
             self._identifier()
         elif char in [' ', '\r', '\t']:
-            pass # Ignore whitespace
+            pass 
         elif char == '\n':
             self.line += 1
         else:
             self._error(self.line, f"Unexpected character '{char}'.")
 
     def _string(self):
-         # Consume characters until the closing quote or end of file
-        # Add a flag to indicate if a backslash escape is encountered
         is_escaping = False
-        parsed_value = [] # Use a list to build the string character by character
+        parsed_value = []
 
         while self._peek() != '"' and not self._is_at_end():
             char = self._advance()
@@ -156,13 +150,9 @@ class Lexer:
                     parsed_value.append('\t')
                 elif char == '\\':
                     parsed_value.append('\\')
-                elif char == '"': # Allow escaping double quotes inside string
+                elif char == '"': 
                     parsed_value.append('"')
-                # You can add more escape sequences here (e.g., \t for tab, \\ for backslash)
                 else:
-                    # If it's an unrecognized escape sequence, you might want to report an error
-                    # or just include the backslash and the character literally.
-                    # For simplicity, we'll just include them literally for now.
                     parsed_value.append('\\')
                     parsed_value.append(char)
                 is_escaping = False
@@ -171,19 +161,16 @@ class Lexer:
             else:
                 parsed_value.append(char)
 
-            if self._peek() == '\n': # Allow multiline strings but don't include the newline in the literal
+            if self._peek() == '\n': 
                 self.line += 1
 
         if self._is_at_end():
-            # Error: Unterminated string
-            # self.error(self.line, "Unterminated string.") # You might have a global error reporter
             print(f"Error at line {self.line}: Unterminated string.", file=sys.stderr)
             self.had_error = True
             return
 
-        self._advance() # Consume the closing '"'
+        self._advance() 
 
-        # Join the list of characters to form the final string value
         value = "".join(parsed_value)
         self._add_token("STRING", value)
 
@@ -192,7 +179,7 @@ class Lexer:
             self._advance()
 
         if self._peek() == '.' and self._peek_next().isdigit():
-            self._advance() # Consume the '.'
+            self._advance() 
             while self._peek().isdigit():
                 self._advance()
 
@@ -212,7 +199,6 @@ class Lexer:
         self._add_token(token_type, literal)
 
     def _multi_line_comment(self):
-        # Consume characters until '*/' is found
         while not (self._peek() == '*' and self._peek_next() == '/') and not self._is_at_end():
             if self._peek() == '\n':
                 self.line += 1
@@ -222,5 +208,5 @@ class Lexer:
             self._error(self.line, "Unterminated multi-line comment.")
             return
 
-        self._advance() # Consume '*'
-        self._advance() # Consume '/'
+        self._advance() 
+        self._advance()
