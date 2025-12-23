@@ -11,9 +11,9 @@ def run(source_code):
     if lexer.had_error:
         sys.exit(65) # Lexical error
 
-    # print("Tokens:")
-    # for token in tokens:
-    #     print(token)
+    #print("Tokens:")
+    #for token in tokens:
+    #    print(token)
 
     # 2. Parsing
     parser = Parser(tokens)
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     else:
         run_prompt()
 
-
+'''
     print("\n--- Running built-in test cases ---")
 
     print("\n--- Test 1: Basic Arithmetic and Variable ---")
@@ -264,3 +264,4 @@ if __name__ == "__main__":
     // print(catchVar); // This should be an undefined variable error if uncommented
     """
     run(code17)
+'''

@@ -1,7 +1,7 @@
 # parser.py
 import sys
 from lexer import Token
-from ast import * # Import all AST nodes
+from ast_tl import * 
 
 class ParseError(Exception):
     def __init__(self, token, message):
@@ -23,7 +23,7 @@ class Parser:
             except ParseError as e:
                 print(e, file=sys.stderr)
                 self.had_error = True
-                self._synchronize() # Error recovery
+                self._synchronize() 
         return statements
 
     def _declaration(self):
@@ -37,7 +37,7 @@ class Parser:
         parameters = []
         if not self._check("RIGHT_PAREN"):
             while True:
-                if len(parameters) >= 255: # Arbitrary limit
+                if len(parameters) >= 255: 
                     self._error(self._peek(), "Cannot have more than 255 parameters.")
                 parameters.append(self._consume("IDENTIFIER", "Expect parameter name."))
                 if not self._match("COMMA"):
@@ -45,7 +45,7 @@ class Parser:
         self._consume("RIGHT_PAREN", "Expect ')' after parameters.")
         self._consume("LEFT_BRACE", f"Expect '{{' before {kind} body.")
         body = self._block()
-        return FunctionDeclaration(name, parameters, Block(body)) # Body is a Block node
+        return FunctionDeclaration(name, parameters, Block(body)) 
 
     def _var_declaration(self):
         name = self._consume("IDENTIFIER", "Expect variable name.")
@@ -56,7 +56,6 @@ class Parser:
         return VarDeclaration(name, initializer)
 
     def _statement(self):
-        if self._match("PRINT"): return self._print_statement()
         if self._match("IF"): return self._if_statement()
         if self._match("WHILE"): return self._while_statement()
         if self._match("FOR"): return self._for_statement()
@@ -66,12 +65,6 @@ class Parser:
         if self._match("TRY"): return self._try_catch_statement()
         if self._match("LEFT_BRACE"): return Block(self._block())
         return self._expression_statement()
-
-    def _print_statement(self):
-        # Now print takes a single expression, but interpreter will handle multiple for flexibility
-        expr = self._expression()
-        self._consume("SEMICOLON", "Expect ';' after value.")
-        return PrintStatement(expr)
 
     def _return_statement(self):
         keyword = self._previous()
@@ -93,13 +86,13 @@ class Parser:
 
     def _try_catch_statement(self):
         self._consume("LEFT_BRACE", "Expect '{' after 'try'.")
-        try_block_statements = self._block() # This returns a list of statements
+        try_block_statements = self._block() 
         self._consume("CATCH", "Expect 'catch' after try block.")
         self._consume("LEFT_PAREN", "Expect '(' after 'catch'.")
         error_name_token = self._consume("IDENTIFIER", "Expect error variable name in catch block.")
         self._consume("RIGHT_PAREN", "Expect ')' after error variable name.")
         self._consume("LEFT_BRACE", "Expect '{' before catch block body.")
-        catch_block_statements = self._block() # This returns a list of statements
+        catch_block_statements = self._block() 
         return TryCatchStatement(Block(try_block_statements), error_name_token, Block(catch_block_statements))
 
 
@@ -120,39 +113,45 @@ class Parser:
         body = self._statement()
         return WhileStatement(condition, body)
 
-    # Implement for loop desugaring here
+
     def _for_statement(self):
         self._consume("LEFT_PAREN", "Expect '(' after 'for'.")
 
         initializer = None
-        if self._match("VAR"):
-            initializer = self._var_declaration()
-        elif not self._check("SEMICOLON"):
-            initializer = self._expression_statement()
-        self._consume("SEMICOLON", "Expect ';' after loop initializer.")
+        if self._match("VAR"): 
+            name_token = self._consume("IDENTIFIER", "Expect variable name after 'let'.")
+            init_expr = None
+            if self._match("EQUAL"):
+                init_expr = self._expression()
+            initializer = VarDeclaration(name_token, init_expr)
+        elif not self._check("SEMICOLON"): 
+            initializer = self._expression()
+        self._consume("SEMICOLON", "Expect ';' after for loop initializer.")
 
         condition = None
-        if not self._check("SEMICOLON"):
+        if not self._check("SEMICOLON"): 
             condition = self._expression()
-        self._consume("SEMICOLON", "Expect ';' after loop condition.")
+
+        self._consume("SEMICOLON", "Expect ';' after for loop condition.")
 
         increment = None
         if not self._check("RIGHT_PAREN"):
             increment = self._expression()
-        self._consume("RIGHT_PAREN", "Expect ')' after for clauses.")
 
-        body = self._statement()
+        self._consume("RIGHT_PAREN", "Expect ')' after for loop clauses.")
 
-        # Desugar for loop into a while loop
+        body = self._statement() 
         if increment:
-            # Wrap body and increment in a block
             body = Block([body, ExpressionStatement(increment)])
-        if not condition:
-            condition = BooleanLiteral(True) # Infinite loop if no condition
+
+        if condition is None:
+            condition = BooleanLiteral(True)
+
         body = WhileStatement(condition, body)
+
         if initializer:
-            # Wrap initializer and while loop in a block
             body = Block([initializer, body])
+
         return body
 
 
@@ -172,20 +171,19 @@ class Parser:
         return self._assignment()
 
     def _assignment(self):
-        expr = self._or() # Changed to _or for logical operator hierarchy
+        expr = self._or() 
 
         if self._match("EQUAL"):
             equals = self._previous()
-            value = self._assignment() # Right-associativity for assignment
+            value = self._assignment() 
 
             if isinstance(expr, Variable):
                 name = expr.name_token
                 return Assignment(name, value)
-            # Add other assignable targets here if needed (e.g., properties)
             self._error(equals, "Invalid assignment target.")
         return expr
 
-    def _or(self): # New method for logical OR
+    def _or(self): 
         expr = self._and()
         while self._match("LOGICAL_OR"):
             operator = self._previous()
@@ -193,7 +191,7 @@ class Parser:
             expr = BinaryExpression(expr, operator, right)
         return expr
 
-    def _and(self): # New method for logical AND
+    def _and(self): 
         expr = self._equality()
         while self._match("LOGICAL_AND"):
             operator = self._previous()
@@ -227,7 +225,7 @@ class Parser:
 
     def _factor(self):
         expr = self._unary()
-        while self._match("SLASH", "STAR"):
+        while self._match("SLASH", "STAR","MODULO"):
             operator = self._previous()
             right = self._unary()
             expr = BinaryExpression(expr, operator, right)
@@ -275,7 +273,6 @@ class Parser:
 
         raise self._error(self._peek(), "Expect expression.")
 
-    # Helper methods for parser
     def _match(self, *types):
         for type in types:
             if self._check(type):
