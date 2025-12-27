@@ -141,16 +141,50 @@ class Lexer:
             self._error(self.line, f"Unexpected character '{char}'.")
 
     def _string(self):
+         # Consume characters until the closing quote or end of file
+        # Add a flag to indicate if a backslash escape is encountered
+        is_escaping = False
+        parsed_value = [] # Use a list to build the string character by character
+
         while self._peek() != '"' and not self._is_at_end():
-            if self._peek() == '\n': self.line += 1
-            self._advance()
+            char = self._advance()
+
+            if is_escaping:
+                if char == 'n':
+                    parsed_value.append('\n')
+                elif char == 't':
+                    parsed_value.append('\t')
+                elif char == '\\':
+                    parsed_value.append('\\')
+                elif char == '"': # Allow escaping double quotes inside string
+                    parsed_value.append('"')
+                # You can add more escape sequences here (e.g., \t for tab, \\ for backslash)
+                else:
+                    # If it's an unrecognized escape sequence, you might want to report an error
+                    # or just include the backslash and the character literally.
+                    # For simplicity, we'll just include them literally for now.
+                    parsed_value.append('\\')
+                    parsed_value.append(char)
+                is_escaping = False
+            elif char == '\\':
+                is_escaping = True
+            else:
+                parsed_value.append(char)
+
+            if self._peek() == '\n': # Allow multiline strings but don't include the newline in the literal
+                self.line += 1
 
         if self._is_at_end():
-            self._error(self.line, "Unterminated string.")
+            # Error: Unterminated string
+            # self.error(self.line, "Unterminated string.") # You might have a global error reporter
+            print(f"Error at line {self.line}: Unterminated string.", file=sys.stderr)
+            self.had_error = True
             return
 
-        self._advance() # The closing "
-        value = self.source[self.start + 1:self.current - 1]
+        self._advance() # Consume the closing '"'
+
+        # Join the list of characters to form the final string value
+        value = "".join(parsed_value)
         self._add_token("STRING", value)
 
     def _number(self):
