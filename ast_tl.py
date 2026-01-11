@@ -8,7 +8,6 @@ class Expression(ASTNode):
 class Statement(ASTNode):
     pass
 
-# Literals
 class NumberLiteral(Expression):
     def __init__(self, value):
         self.value = value
@@ -33,10 +32,9 @@ class NilLiteral(Expression):
     def __repr__(self):
         return "Nil()"
 
-# Variables
 class Variable(Expression):
     def __init__(self, name_token):
-        self.name_token = name_token # Store the identifier token
+        self.name_token = name_token 
     def __repr__(self):
         return f"Variable('{self.name_token.lexeme}')"
 
@@ -47,7 +45,6 @@ class Assignment(Expression):
     def __repr__(self):
         return f"Assignment('{self.name_token.lexeme}', {self.value})"
 
-# Operators
 class BinaryExpression(Expression):
     def __init__(self, left, operator_token, right):
         self.left = left
@@ -63,7 +60,6 @@ class UnaryExpression(Expression):
     def __repr__(self):
         return f"Unary('{self.operator_token.lexeme}', {self.right})"
 
-# Statements
 class VarDeclaration(Statement):
     def __init__(self, name_token, initializer=None):
         self.name_token = name_token
@@ -101,22 +97,22 @@ class WhileStatement(Statement):
 class FunctionDeclaration(Statement):
     def __init__(self, name_token, parameters, body):
         self.name_token = name_token
-        self.parameters = parameters # list of parameter tokens
-        self.body = body # Block statement
+        self.parameters = parameters 
+        self.body = body
     def __repr__(self):
         return f"FunDecl('{self.name_token.lexeme}', {self.parameters}, {self.body})"
 
 class CallExpression(Expression):
     def __init__(self, callee, paren_token, arguments):
-        self.callee = callee # The expression being called (e.g., Variable for function name)
-        self.paren_token = paren_token # The '(' token, used for error reporting
-        self.arguments = arguments # list of expressions
+        self.callee = callee 
+        self.paren_token = paren_token 
+        self.arguments = arguments
     def __repr__(self):
         return f"Call({self.callee}, {self.arguments})"
 
 class ReturnStatement(Statement):
     def __init__(self, keyword_token, value=None):
-        self.keyword_token = keyword_token # 'return' token
+        self.keyword_token = keyword_token
         self.value = value
     def __repr__(self):
         return f"Return({self.value})"
@@ -133,12 +129,6 @@ class ContinueStatement(Statement):
     def __repr__(self):
         return "Continue()"
 
-class PrintStatement(Statement):
-    def __init__(self, expression):
-        self.expression = expression
-    def __repr__(self):
-        return f"Print({self.expression})"
-
 class TryCatchStatement(Statement):
     def __init__(self, try_block, error_name_token, catch_block):
         self.try_block = try_block
@@ -146,3 +136,33 @@ class TryCatchStatement(Statement):
         self.catch_block = catch_block
     def __repr__(self):
         return f"TryCatch(try={self.try_block}, error_name='{self.error_name_token.lexeme}', catch={self.catch_block})"
+
+class ArrayLiteral(Expression):
+    def __init__(self, bracket_token, elements):
+        self.bracket_token = bracket_token
+        self.elements = elements
+    def __repr__(self):
+        return f"ArrayLiteral({self.elements})"
+    def accept(self, visitor):
+        return visitor.visit_ArrayLiteral(self)
+
+class Subscript(Expression):
+    def __init__(self, callee, bracket_token, index):
+        self.callee = callee
+        self.bracket_token = bracket_token
+        self.index = index
+    def __repr__(self):
+        return f"Subscript({self.callee}[{self.index}])"
+    def accept(self, visitor):
+        return visitor.visit_Subscript(self)
+
+class Set(Expression):
+    def __init__(self, callee, index, value, bracket_token):
+        self.callee = callee
+        self.index = index
+        self.value = value
+        self.bracket_token = bracket_token
+    def __repr__(self):
+        return f"Set({self.callee}[{self.index}] = {self.value})"
+    def accept(self, visitor):
+        return visitor.visit_Set(self)
