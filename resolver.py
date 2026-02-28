@@ -1,5 +1,6 @@
 # resolver.py
-from ast import *
+import sys
+from ast_tl import *
 from lexer import Token # For error reporting
 
 class ResolveError(Exception):
